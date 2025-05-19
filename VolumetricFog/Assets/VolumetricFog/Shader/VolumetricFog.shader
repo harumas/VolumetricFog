@@ -19,7 +19,7 @@
             HLSLPROGRAM
 
             #include "./VolumetricFog.hlsl"
-            
+
             #pragma multi_compile _ _FORWARD_PLUS
 
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
@@ -39,10 +39,8 @@
 
             float4 Frag(Varyings input) : SV_Target
             {
-                // ステレオレンダリングのサポート
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-                // フォグのカラーを計算
                 return VolumetricFog(input.texcoord, input.positionCS.xy);
             }
 
@@ -51,6 +49,70 @@
 
         Pass
         {
+            Name "VolumetricFogHorizontalBlur"
+            
+            ZTest Always
+            ZWrite Off
+            Cull Off
+            Blend Off
+
+            HLSLPROGRAM
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
+            #include "./DepthAwareGaussianBlur.hlsl"
+
+            #pragma vertex Vert
+            #pragma fragment Frag
+
+#if UNITY_VERSION < 202320
+            float4 _BlitTexture_TexelSize;
+#endif
+
+            float4 Frag(Varyings input) : SV_Target
+            {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
+                return DepthAwareGaussianBlur(input.texcoord, float2(1.0, 0.0), _BlitTexture, sampler_PointClamp, _BlitTexture_TexelSize.xy);
+            }
+
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "VolumetricFogVerticalBlur"
+            
+            ZTest Always
+            ZWrite Off
+            Cull Off
+            Blend Off
+
+            HLSLPROGRAM
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
+            #include "./DepthAwareGaussianBlur.hlsl"
+
+            #pragma vertex Vert
+            #pragma fragment Frag
+
+#if UNITY_VERSION < 202320
+            float4 _BlitTexture_TexelSize;
+#endif
+
+            float4 Frag(Varyings input) : SV_Target
+            {
+                UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
+
+                return DepthAwareGaussianBlur(input.texcoord, float2(0.0, 1.0), _BlitTexture, sampler_PointClamp, _BlitTexture_TexelSize.xy);
+            }
+
+            ENDHLSL
+        }
+
+        Pass
+        {   
             Name "VolumetricFogUpsampleComposition"
             
             ZTest Always

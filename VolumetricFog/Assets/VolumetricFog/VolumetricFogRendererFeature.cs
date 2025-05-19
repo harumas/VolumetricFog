@@ -36,7 +36,7 @@ namespace Harumaron
 
             if (isPostProcessEnabled && shouldAddVolumetricFogRenderPass)
             {
-                renderPass.renderPassEvent = GetRenderPassEvent();
+                renderPass.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
                 renderPass.ConfigureInput(ScriptableRenderPassInput.Depth);
                 renderer.EnqueuePass(renderPass);
             }
@@ -77,13 +77,6 @@ namespace Harumaron
             bool isCameraOk = cameraType != CameraType.Preview && cameraType != CameraType.Reflection;
 
             return isActive && isVolumeOk && isCameraOk;
-        }
-
-        private RenderPassEvent GetRenderPassEvent()
-        {
-            VolumetricFogVolumeComponent fogVolume = VolumeManager.instance.stack.GetComponent<VolumetricFogVolumeComponent>();
-
-            return (RenderPassEvent)fogVolume.renderPassEvent.value;
         }
     }
 }

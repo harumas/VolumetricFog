@@ -17,7 +17,6 @@ namespace Harumaron
         private const string VolumetricFogUpsampleCompositionRTName = "_VolumetricFogUpsampleComposition";
 
         public const RenderPassEvent DefaultRenderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
-        public const VolumetricFogRenderPassEvent DefaultVolumetricFogRenderPassEvent = (VolumetricFogRenderPassEvent)DefaultRenderPassEvent;
 
         private ProfilingSampler downsampleDepthProfilingSampler;
         private Material downsampleDepthMaterial;
@@ -34,26 +33,20 @@ namespace Harumaron
         private static readonly int FrameCountId = Shader.PropertyToID("_FrameCount");
         private static readonly int CustomAdditionalLightsCountId = Shader.PropertyToID("_CustomAdditionalLightsCount");
         private static readonly int DistanceId = Shader.PropertyToID("_Distance");
-        private static readonly int BaseHeightId = Shader.PropertyToID("_BaseHeight");
-        private static readonly int MaximumHeightId = Shader.PropertyToID("_MaximumHeight");
         private static readonly int GroundHeightId = Shader.PropertyToID("_GroundHeight");
         private static readonly int DensityId = Shader.PropertyToID("_Density");
         private static readonly int AbsortionId = Shader.PropertyToID("_Absortion");
         private static readonly int APVContributionWeigthId = Shader.PropertyToID("_APVContributionWeight");
-        private static readonly int TintId = Shader.PropertyToID("_Tint");
         private static readonly int MaxStepsId = Shader.PropertyToID("_MaxSteps");
 
         private static readonly int AnisotropiesArrayId = Shader.PropertyToID("_Anisotropies");
         private static readonly int ScatteringsArrayId = Shader.PropertyToID("_Scatterings");
         private static readonly int RadiiSqArrayId = Shader.PropertyToID("_RadiiSq");
 
-        private static readonly float[] Anisotropies = new float[UniversalRenderPipeline.maxVisibleAdditionalLights + 1];
-        private static readonly float[] Scatterings = new float[UniversalRenderPipeline.maxVisibleAdditionalLights + 1];
+        private static readonly float[] Anisotropies = new float[UniversalRenderPipeline.maxVisibleAdditionalLights];
+        private static readonly float[] Scatterings = new float[UniversalRenderPipeline.maxVisibleAdditionalLights];
         private static readonly float[] RadiiSq = new float[UniversalRenderPipeline.maxVisibleAdditionalLights];
 
-        /// <summary>
-        /// The subpasses the volumetric fog render pass is made of.
-        /// </summary>
         private enum PassStage : byte
         {
             DownsampleDepth,
@@ -62,9 +55,6 @@ namespace Harumaron
             VolumetricFogUpsampleComposition
         }
 
-        /// <summary>
-        /// Holds the data needed by the execution of the volumetric fog render pass subpasses.
-        /// </summary>
         private class PassData
         {
             public PassStage stage;
@@ -96,9 +86,6 @@ namespace Harumaron
             InitializePassesIndices();
         }
 
-        /// <summary>
-        /// Initializes the passes indices.
-        /// </summary>
         private void InitializePassesIndices()
         {
             downsampleDepthPassIndex = downsampleDepthMaterial.FindPass("DownsampleDepth");
@@ -108,11 +95,6 @@ namespace Harumaron
             volumetricFogUpsampleCompositionPassIndex = volumetricFogMaterial.FindPass("VolumetricFogUpsampleComposition");
         }
 
-        /// <summary>
-        /// <inheritdoc/>
-        /// </summary>
-        /// <param name="renderGraph"></param>
-        /// <param name="frameData"></param>
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
             UniversalCameraData cameraData = frameData.Get<UniversalCameraData>();
@@ -233,11 +215,6 @@ namespace Harumaron
         }
 
 
-        /// <summary>
-        /// Executes the pass with the information from the pass data.
-        /// </summary>
-        /// <param name="passData"></param>
-        /// <param name="context"></param>
         private static void ExecutePass(PassData passData, RasterGraphContext context)
         {
             PassStage stage = passData.stage;
@@ -272,14 +249,12 @@ namespace Harumaron
             }
         }
 
-        private static void UpdateVolumetricFogMaterialParameters(Material volumetricFogMaterial, int mainLightIndex, int additionalLightsCount,
-            NativeArray<VisibleLight> visibleLights)
+        private static void UpdateVolumetricFogMaterialParameters(Material volumetricFogMaterial, int mainLightIndex,
+            int additionalLightsCount, NativeArray<VisibleLight> visibleLights)
         {
             VolumetricFogVolumeComponent fogVolume = VolumeManager.instance.stack.GetComponent<VolumetricFogVolumeComponent>();
 
-            bool enableMainLightContribution =
-                fogVolume.enableMainLightContribution.value && fogVolume.scattering.value > 0.0f && mainLightIndex > -1;
-            bool enableAdditionalLightsContribution = fogVolume.enableAdditionalLightsContribution.value && additionalLightsCount > 0;
+            bool enableAdditionalLightsContribution = additionalLightsCount > 0;
 
 #if UNITY_2023_1_OR_NEWER
             bool enableAPVContribution = fogVolume.enableAPVContribution.value && fogVolume.APVContributionWeight.value > 0.0f;
@@ -289,24 +264,16 @@ namespace Harumaron
                 volumetricFogMaterial.DisableKeyword("_APV_CONTRIBUTION_ENABLED");
 #endif
 
-            if (enableMainLightContribution)
-                volumetricFogMaterial.DisableKeyword("_MAIN_LIGHT_CONTRIBUTION_DISABLED");
-            else
-                volumetricFogMaterial.EnableKeyword("_MAIN_LIGHT_CONTRIBUTION_DISABLED");
-
             if (enableAdditionalLightsContribution)
                 volumetricFogMaterial.DisableKeyword("_ADDITIONAL_LIGHTS_CONTRIBUTION_DISABLED");
             else
                 volumetricFogMaterial.EnableKeyword("_ADDITIONAL_LIGHTS_CONTRIBUTION_DISABLED");
 
-            UpdateLightsParameters(volumetricFogMaterial, fogVolume, enableMainLightContribution, enableAdditionalLightsContribution, mainLightIndex,
-                visibleLights);
+            UpdateLightsParameters(volumetricFogMaterial, mainLightIndex, enableAdditionalLightsContribution, visibleLights);
 
             volumetricFogMaterial.SetInteger(FrameCountId, Time.renderedFrameCount % 64);
             volumetricFogMaterial.SetInteger(CustomAdditionalLightsCountId, additionalLightsCount);
             volumetricFogMaterial.SetFloat(DistanceId, fogVolume.distance.value);
-            volumetricFogMaterial.SetFloat(BaseHeightId, fogVolume.baseHeight.value);
-            volumetricFogMaterial.SetFloat(MaximumHeightId, fogVolume.maximumHeight.value);
             volumetricFogMaterial.SetFloat(GroundHeightId,
                 (fogVolume.enableGround.overrideState && fogVolume.enableGround.value) ? fogVolume.groundHeight.value : float.MinValue);
             volumetricFogMaterial.SetFloat(DensityId, fogVolume.density.value);
@@ -315,34 +282,28 @@ namespace Harumaron
             volumetricFogMaterial.SetFloat(APVContributionWeigthId,
                 fogVolume.enableAPVContribution.value ? fogVolume.APVContributionWeight.value : 0.0f);
 #endif
-            volumetricFogMaterial.SetColor(TintId, fogVolume.tint.value);
             volumetricFogMaterial.SetInteger(MaxStepsId, fogVolume.maxSteps.value);
         }
 
 
-        private static void UpdateLightsParameters(Material volumetricFogMaterial, VolumetricFogVolumeComponent fogVolume,
-            bool enableMainLightContribution, bool enableAdditionalLightsContribution, int mainLightIndex, NativeArray<VisibleLight> visibleLights)
+        private static void UpdateLightsParameters(Material volumetricFogMaterial, int mainLightIndex, bool enableAdditionalLightsContribution,
+            NativeArray<VisibleLight> visibleLights)
         {
-            if (enableMainLightContribution)
-            {
-                Anisotropies[visibleLights.Length - 1] = fogVolume.anisotropy.value;
-                Scatterings[visibleLights.Length - 1] = fogVolume.scattering.value;
-            }
-
             if (enableAdditionalLightsContribution)
             {
                 int additionalLightIndex = 0;
 
-                for (int i = 0; i < visibleLights.Length; ++i)
+                for (var index = 0; index < visibleLights.Length; index++)
                 {
-                    if (i == mainLightIndex)
+                    if (index == mainLightIndex)
                         continue;
-
+                    
+                    var light = visibleLights[index];
                     float anisotropy = 0.0f;
                     float scattering = 0.0f;
                     float radius = 0.0f;
 
-                    if (visibleLights[i].light.TryGetComponent(out VolumetricAdditionalLight volumetricLight))
+                    if (light.light.TryGetComponent(out VolumetricAdditionalLight volumetricLight))
                     {
                         if (volumetricLight.gameObject.activeInHierarchy && volumetricLight.enabled)
                         {
@@ -358,7 +319,7 @@ namespace Harumaron
                 }
             }
 
-            if (enableMainLightContribution || enableAdditionalLightsContribution)
+            if (enableAdditionalLightsContribution)
             {
                 volumetricFogMaterial.SetFloatArray(AnisotropiesArrayId, Anisotropies);
                 volumetricFogMaterial.SetFloatArray(ScatteringsArrayId, Scatterings);
