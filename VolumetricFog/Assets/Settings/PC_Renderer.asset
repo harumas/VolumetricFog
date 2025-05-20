@@ -1,5 +1,19 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8375488643985571412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab08a6ae5824c634bba5613f3fb41add, type: 3}
+  m_Name: ScreenSpaceReflectionRenderer
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  screenSpaceReflectionShader: {fileID: 4800000, guid: 9ad6f82d7deb5ca40a06eae71bd80c3d, type: 3}
 --- !u!114 &-6918871711362511368
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -42,7 +56,8 @@ MonoBehaviour:
   m_RendererFeatures:
   - {fileID: 7833122117494664109}
   - {fileID: -6918871711362511368}
-  m_RendererFeatureMap: ad6b866f10d7b46cf80dbd15d63afb9f
+  - {fileID: -8375488643985571412}
+  m_RendererFeatureMap: ad6b866f10d7b46cf80dbd15d63afb9fac01ec1a7449c48b
   m_UseNativeRenderPass: 1
   xrSystemData: {fileID: 0}
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}

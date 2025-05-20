@@ -60,15 +60,12 @@ MonoBehaviour:
   m_Name: VolumetricFogVolumeComponent
   m_EditorClassIdentifier: 
   active: 1
+  enabled:
+    m_OverrideState: 1
+    m_Value: 1
   distance:
     m_OverrideState: 1
     m_Value: 64
-  baseHeight:
-    m_OverrideState: 1
-    m_Value: 0
-  maximumHeight:
-    m_OverrideState: 1
-    m_Value: 50
   enableGround:
     m_OverrideState: 1
     m_Value: 1
@@ -87,18 +84,12 @@ MonoBehaviour:
   APVContributionWeight:
     m_OverrideState: 0
     m_Value: 1
-  enableAdditionalLightsContribution:
-    m_OverrideState: 1
-    m_Value: 1
   maxSteps:
     m_OverrideState: 0
     m_Value: 128
   blurIterations:
     m_OverrideState: 0
     m_Value: 2
-  enabled:
-    m_OverrideState: 1
-    m_Value: 1
 --- !u!114 &-3442437998094802401
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -217,6 +208,7 @@ MonoBehaviour:
   - {fileID: 7391319092446245454}
   - {fileID: -3357603926938260329}
   - {fileID: -3715336225606493919}
+  - {fileID: 1827892335073852843}
 --- !u!114 &849379129802519247
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -257,6 +249,22 @@ MonoBehaviour:
   maxNits:
     m_OverrideState: 1
     m_Value: 647
+--- !u!114 &1827892335073852843
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 728cd39ba031be147a194018b2e3419c, type: 3}
+  m_Name: ScreenSpaceReflection
+  m_EditorClassIdentifier: 
+  active: 1
+  intensity:
+    m_OverrideState: 1
+    m_Value: 0.962
 --- !u!114 &7391319092446245454
 MonoBehaviour:
   m_ObjectHideFlags: 3

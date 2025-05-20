@@ -5,6 +5,8 @@
 #include "./DeclareDownsampledDepthTexture.hlsl"
 #include "./ProjectionUtils.hlsl"
 
+#pragma target 4.5
+
 // Upsamples the given texture using both the downsampled and full resolution depth information.
 float4 DepthAwareUpsample(float2 uv, TEXTURE2D_X(textureToUpsample))
 {

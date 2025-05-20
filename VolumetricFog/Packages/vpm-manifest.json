@@ -1,0 +1,12 @@
+{
+  "dependencies": {
+    "jp.lilxyzw.liltoon": {
+      "version": "1.10.2"
+    }
+  },
+  "locked": {
+    "jp.lilxyzw.liltoon": {
+      "version": "1.10.2"
+    }
+  }
+}
