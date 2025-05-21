@@ -107,7 +107,7 @@ namespace Harumaron
                 out TextureHandle volumetricFogRenderTarget,
                 out TextureHandle volumetricFogBlurRenderTarget,
                 out TextureHandle volumetricFogUpsampleCompositionTarget);
-
+            
             using (IRasterRenderGraphBuilder builder =
                    renderGraph.AddRasterRenderPass("Downsample Depth Pass", out PassData passData, downsampleDepthProfilingSampler))
             {
