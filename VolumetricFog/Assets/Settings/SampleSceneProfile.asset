@@ -18,10 +18,10 @@ MonoBehaviour:
     m_Value: 0
   threshold:
     m_OverrideState: 1
-    m_Value: 1
+    m_Value: 0.74
   intensity:
     m_OverrideState: 1
-    m_Value: 0.25
+    m_Value: 1.11
   scatter:
     m_OverrideState: 1
     m_Value: 0.5
@@ -60,15 +60,12 @@ MonoBehaviour:
   m_Name: VolumetricFogVolumeComponent
   m_EditorClassIdentifier: 
   active: 1
+  enabled:
+    m_OverrideState: 1
+    m_Value: 1
   distance:
     m_OverrideState: 1
     m_Value: 64
-  baseHeight:
-    m_OverrideState: 1
-    m_Value: 0
-  maximumHeight:
-    m_OverrideState: 1
-    m_Value: 50
   enableGround:
     m_OverrideState: 1
     m_Value: 1
@@ -87,18 +84,12 @@ MonoBehaviour:
   APVContributionWeight:
     m_OverrideState: 0
     m_Value: 1
-  enableAdditionalLightsContribution:
-    m_OverrideState: 1
-    m_Value: 1
   maxSteps:
     m_OverrideState: 0
     m_Value: 128
   blurIterations:
     m_OverrideState: 0
     m_Value: 2
-  enabled:
-    m_OverrideState: 1
-    m_Value: 1
 --- !u!114 &-3442437998094802401
 MonoBehaviour:
   m_ObjectHideFlags: 3
