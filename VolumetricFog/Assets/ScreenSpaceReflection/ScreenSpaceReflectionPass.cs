@@ -62,7 +62,7 @@ namespace PostProcessing
                 builder.UseTexture(resourceData.cameraDepthTexture);
                 builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
                 {
-                    Blitter.BlitCameraTexture(context.cmd, data.source,data.source, data.material, 0);
+                    Blitter.BlitTexture(context.cmd, data.source, Vector2.one, data.material, 0);
                 });
             }
         }
