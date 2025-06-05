@@ -121,7 +121,7 @@ Material:
     - _NoiseScale: 11.4
     - _NoiseStrength: 0.022
     - _OcclusionStrength: 1
-    - _OutlineOffset: -1.9
+    - _OutlineOffset: -0.1
     - _OutlineWidth: 11.8
     - _Parallax: 0.005
     - _QueueOffset: 0
