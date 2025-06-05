@@ -2,14 +2,13 @@ Shader "Example/Outline"
 {
     Properties
     {
+        [MainTexture] _MainTex ("Main Texture", 2D) = "white" {}
         _BaseColor ("Base Color", Color) = (1, 1, 1, 1)
         _SpecColor ("Specular Color", Color) = (1, 1, 1, 1)
         _OutlineColor ("Outline Color", Color) = (0, 0, 0, 1)
         _OutlineWidth ("Outline Width", Range(0, 100)) = 1
         _OutlineOffset ("Outline Offset", Range(-10, 10)) = 1
-        _Smoothness ("Smoothness", Range(0, 1)) = 0.5
-        _NoiseScale ("Noise Scale", Range(0.1, 50)) = 5
-        _NoiseStrength ("Noise Strength", Range(0, 1)) = 0.1
+        _ZOffset ("Z Offset", Float) = 1
     }
 
     SubShader
@@ -34,7 +33,11 @@ Shader "Example/Outline"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
+            TEXTURE2D(_MainTex);
+            SAMPLER(sampler_MainTex);
+
             CBUFFER_START(UnityPerMaterial)
+                float4 _MainTex_ST;
                 float4 _BaseColor;
                 float4 _SpecColor;
                 float _Smoothness;
@@ -46,6 +49,7 @@ Shader "Example/Outline"
             {
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
+                float2 uv : TEXCOORD0;
             };
 
             struct Varyings
@@ -53,68 +57,42 @@ Shader "Example/Outline"
                 float4 positionHCS : SV_POSITION;
                 float3 normalWS : TEXCOORD0;
                 float3 positionWS : TEXCOORD1;
+                float3 viewDirWS : TEXCOORD2;
+                float2 uv : TEXCOORD3;
             };
-
-
-            float random2(float2 st)
-            {
-                st = float2(dot(st, float2(127.1, 311.7)),
-                                                                     dot(st, float2(269.5, 183.3)));
-                return -1.0 + 2.0 * frac(sin(st) * 43758.5453123);
-            }
-
-            // 2Dパーリンノイズ
-            float perlin2D(float2 st)
-            {
-                float2 i = floor(st);
-                float2 f = frac(st);
-
-                float2 u = f * f * (3.0 - 2.0 * f);
-
-                float2 ga = random2(i + float2(0.0, 0.0));
-                float2 gb = random2(i + float2(1.0, 0.0));
-                float2 gc = random2(i + float2(0.0, 1.0));
-                float2 gd = random2(i + float2(1.0, 1.0));
-
-                float va = dot(ga, f - float2(0.0, 0.0));
-                float vb = dot(gb, f - float2(1.0, 0.0));
-                float vc = dot(gc, f - float2(0.0, 1.0));
-                float vd = dot(gd, f - float2(1.0, 1.0));
-
-                return lerp(lerp(va, vb, u.x),
-                  lerp(vc, vd, u.x), u.y) * 0.5 + 0.5;
-            }
 
 
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
-
+                OUT.uv = TRANSFORM_TEX(IN.uv, _MainTex);
                 OUT.normalWS = TransformObjectToWorldNormal(IN.normalOS);
                 OUT.positionWS = TransformObjectToWorld(IN.positionOS.xyz);
-                float2 view = TransformWorldToView(OUT.positionWS);
-                float noise = perlin2D(view * _NoiseScale) * _NoiseStrength;
-                float3 posOS = IN.positionOS.xyz + IN.normalOS * noise;
-                OUT.positionHCS = TransformObjectToHClip(posOS);
+                OUT.positionHCS = TransformObjectToHClip(IN.positionOS);
+
+                float3 wpos = TransformObjectToWorld(IN.positionOS);
+
+                // カメラの正面ベクトルを取得
+                OUT.viewDirWS = normalize(_WorldSpaceCameraPos - wpos);
+
                 return OUT;
             }
 
-
             half4 frag(Varyings IN) : SV_Target
             {
+                half4 texColor = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, IN.uv);
+
                 Light mainLight = GetMainLight();
                 float3 lightDir = mainLight.direction;
-                float3 viewDir = normalize(GetWorldSpaceViewDir(IN.positionWS));
-                float3 halfDir = normalize(lightDir + viewDir);
-
                 float3 normal = normalize(IN.normalWS);
-                float NdotL = saturate(dot(normal, lightDir)) * 0.8 + 0.5;
-                float NdotH = saturate(dot(normal, halfDir));
+                float NdotL = saturate(dot(normal, lightDir)) + 0.3 > 0.5 ? 1 : 0.6;
 
-                float specular = 1 - step(pow(NdotH, _Smoothness * 100.0) * _Smoothness, 0.1);
-                float3 specColor = _SpecColor.rgb * specular * mainLight.color;
+                // フレネル反射の計算
+                float fresnel = 1.0 - saturate(dot(normal, IN.viewDirWS));
+                float ndot = saturate(dot(normal, lightDir)) * 1.8;
+                fresnel = pow(fresnel * ndot, 6.0); // べき乗で効果を調整
 
-                return half4(_BaseColor.rgb * NdotL + specColor, 1);
+                return half4(_BaseColor.rgb * texColor.rgb * NdotL + fresnel, 1);
             }
             ENDHLSL
         }
@@ -134,6 +112,7 @@ Shader "Example/Outline"
                 float4 _OutlineColor;
                 float _OutlineWidth;
                 float _OutlineOffset;
+                float _ZOffset;
             CBUFFER_END
 
             struct Attributes
@@ -151,11 +130,17 @@ Shader "Example/Outline"
             {
                 Varyings OUT;
                 float3 posOS = IN.positionOS.xyz + IN.normalOS * (_OutlineWidth * 0.001);
+                float3 wpos = TransformObjectToWorld(posOS);
+
+                // カメラの正面ベクトルを取得
+                float3 viewDir = normalize(_WorldSpaceCameraPos - wpos);
 
                 // オフセット方向に更に移動
                 float3 viewPos = TransformWorldToView(TransformObjectToWorld(posOS));
                 viewPos.xy += float2(1, 1) * (_OutlineOffset * 0.01);
                 float3 worldPos = TransformViewToWorld(viewPos);
+
+                worldPos -= viewDir * _ZOffset;
 
                 OUT.positionHCS = TransformWorldToHClip(worldPos);
 
