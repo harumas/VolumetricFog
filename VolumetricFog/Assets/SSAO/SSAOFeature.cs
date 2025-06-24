@@ -149,7 +149,7 @@ public class SSAOFeature : ScriptableRendererFeature
             }
             
             return;
-
+            
             using (var builder = renderGraph.AddRasterRenderPass<BlitPassData>("SSAO Composite Pass", out var passData))
             {
                 passData.material = m_Material;

@@ -114,7 +114,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Active: 1
   settings:
-    Intensity: 1.9
-    Radius: 0.5
-    SampleCount: 8
+    Blend: 0.4
+    OcclusionSampleLength: 0.12
+    OcclusionMinDistance: 0
+    OcclusionMaxDistance: 5
+    OcclusionBias: 0.001
+    OcclusionStrength: 1
+    OcclusionPower: 1
+    OcclusionColor: {r: 0, g: 0, b: 0, a: 1}
   ssaoShader: {fileID: 4800000, guid: aa54c93f5f2b0e145bc0b9cec9bf5edc, type: 3}
