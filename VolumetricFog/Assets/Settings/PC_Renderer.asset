@@ -112,14 +112,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e372f27cd8211b447be4556529f9b566, type: 3}
   m_Name: SSAOFeature
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   settings:
     Blend: 0.4
-    OcclusionSampleLength: 0.12
+    OcclusionSampleLength: 0.08
     OcclusionMinDistance: 0
     OcclusionMaxDistance: 5
     OcclusionBias: 0.001
-    OcclusionStrength: 1
-    OcclusionPower: 1
+    OcclusionStrength: 0.73
+    OcclusionPower: 0.98
     OcclusionColor: {r: 0, g: 0, b: 0, a: 1}
   ssaoShader: {fileID: 4800000, guid: aa54c93f5f2b0e145bc0b9cec9bf5edc, type: 3}

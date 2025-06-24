@@ -9,6 +9,8 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: URPSketchMat
   m_Shader: {fileID: 4800000, guid: 4d8cf8af566d94283a4e51589a8ab542, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords:
   - _CONSIDERNORMAL_ON
@@ -23,6 +25,7 @@ Material:
   m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
@@ -47,7 +50,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 76b9e4908ec80514daadef40dc917e1f, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
@@ -95,7 +98,7 @@ Material:
     - _MultBrightNess: 1
     - _NormalOutline: 1
     - _OcclusionStrength: 1
-    - _OutlineWidth: 0.485
+    - _OutlineWidth: 0
     - _Parallax: 0.02
     - _SelfShadow: 1
     - _Shadow: 1
@@ -104,7 +107,7 @@ Material:
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
-    - _StrokeDensity: 4.66
+    - _StrokeDensity: 6.02
     - _UVSec: 0
     - _UseGradation: 0
     - _UseStroke: 1
@@ -112,5 +115,6 @@ Material:
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _OutlineColor: {r: 0, g: 0, b: 0, a: 1}
+    - _OutlineColor: {r: 0, g: 0.09803922, b: 0, a: 1}
   m_BuildTextureStacks: []
+  m_AllowLocking: 1

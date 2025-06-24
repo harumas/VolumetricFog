@@ -20,8 +20,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Outline 1
-  m_Shader: {fileID: 4800000, guid: 1a4096f172b3d964f9291941eaf1d74d, type: 3}
+  m_Name: Outline 2
+  m_Shader: {fileID: 4800000, guid: 1358e5e92e2604843bae3960be4b1ac3, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -63,7 +63,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _Hatch1:
         m_Texture: {fileID: 2800000, guid: 555cad88493e44b8b8515fbf3117de72, type: 3}
-        m_Scale: {x: 8, y: 8}
+        m_Scale: {x: 4, y: 4}
         m_Offset: {x: 0, y: 0}
     - _Hatch2:
         m_Texture: {fileID: 2800000, guid: d469a1f672dab244eb9b847856279f43, type: 3}
@@ -74,7 +74,7 @@ Material:
         m_Scale: {x: 4, y: 4}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 76b9e4908ec80514daadef40dc917e1f, type: 3}
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTexture:
@@ -138,7 +138,7 @@ Material:
     - _NoiseStrength: 0.022
     - _OcclusionStrength: 1
     - _OutlineOffset: -0.1
-    - _OutlineWidth: 0
+    - _OutlineWidth: 3.6
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _ReceiveShadows: 1

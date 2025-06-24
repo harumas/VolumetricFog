@@ -57,7 +57,6 @@ Shader "Hidden/SSAO"
                 offsetClipPosition.y = -offsetClipPosition.y;
                 #endif
 
-                // TODO: reverse zを考慮してあるべき？
                 // スクリーン座標に変換
                 float2 samplingCoord = (offsetClipPosition.xy / offsetClipPosition.w) * 0.5 + 0.5;
                 float samplingRawDepth = SampleRawDepth(samplingCoord);
@@ -68,27 +67,26 @@ Shader "Hidden/SSAO"
 
             float4 FragSSAO(Varyings input) : SV_Target
             {
-                // // 深度値を取得
+                // 深度値を取得
                 float d = SAMPLE_TEXTURE2D_X(_CameraDepthTexture, sampler_CameraDepthTexture, input.texcoord).r;
-                //
-                // // ワールド座標を復元
+
+                // ワールド座標を復元
                 float3 worldPos = ComputeWorldSpacePosition(input.texcoord, d, UNITY_MATRIX_I_VP);
-                //
-                // // ビュー座標に変換！
+
+                // return float4(worldPos, 1.0);
+                
+                // ビュー座標に変換
                 float3 viewPosition = mul(UNITY_MATRIX_V, float4(worldPos, 1.0)).xyz;
-                //
-                // return float4(viewPos, 1.0);
+
+                viewPosition.z = -viewPosition.z;
 
                 float4 color = float4(1, 1, 1, 1);
 
                 float rawDepth = SampleRawDepth(input.texcoord);
                 float depth = Linear01Depth(rawDepth, _ZBufferParams);
 
+                // デバッグ用
                 // return float4(depth, depth, depth, 1);
-
-                //return float4(input.texcoord, 1, 1.0);
-                // float3 viewPosition = ComputeViewSpacePosition(input.texcoord, depth, UNITY_MATRIX_I_P);
-                // return float4(viewPosition, 1.0);
                 // return float4(rawDepth, rawDepth, rawDepth, 1.0);
 
 
@@ -114,15 +112,16 @@ Shader "Hidden/SSAO"
                     float rawDepthA = SampleRawDepthByViewPosition(viewPosition, offsetA);
                     float rawDepthB = SampleRawDepthByViewPosition(viewPosition, offsetB);
 
+
                     float depthA = Linear01Depth(rawDepthA, _ZBufferParams);
                     float depthB = Linear01Depth(rawDepthB, _ZBufferParams);
-
+                    
                     float3 viewPositionA = ComputeViewSpacePosition(input.texcoord, depthA, UNITY_MATRIX_I_P);
                     float3 viewPositionB = ComputeViewSpacePosition(input.texcoord, depthB, UNITY_MATRIX_I_P);
-
+                    
                     float distA = distance(viewPositionA, viewPosition);
                     float distB = distance(viewPositionB, viewPosition);
-
+                    
                     if (abs(depth - depthA) < _OcclusionBias)
                     {
                         continue;
@@ -131,7 +130,7 @@ Shader "Hidden/SSAO"
                     {
                         continue;
                     }
-
+                    
                     if (distA < _OcclusionMinDistance || _OcclusionMaxDistance < distA)
                     {
                         continue;
@@ -140,18 +139,21 @@ Shader "Hidden/SSAO"
                     {
                         continue;
                     }
-
+                    
                     // pattern_2: compare with surface to camera
                     float3 surfaceToCameraDir = -normalize(viewPosition);
                     float dotA = dot(normalize(viewPositionA - viewPosition), surfaceToCameraDir);
                     float dotB = dot(normalize(viewPositionB - viewPosition), surfaceToCameraDir);
-                    float ao = (dotA + dotB) * .5;
-
+                    float ao = (dotA + dotB) * 0.5;
+                    
                     occludedAcc += ao;
                 }
 
                 float aoRate = occludedAcc / (float)samplingCount;
+
                 float ao = saturate(pow(saturate(aoRate), _OcclusionPower) * _OcclusionStrength);
+
+                ao = 1 - ao;
 
                 return float4(ao, ao, ao, 1.0);
             }
