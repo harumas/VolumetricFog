@@ -160,10 +160,16 @@ Shader "Hidden/Custom/SSAOAngleBased"
                 float4 baseColor = SAMPLE_TEXTURE2D(_BlitTexture, sampler_LinearClamp, i.texcoord);
 
                 // 1. depth を depth texture から参照する場合
-                // return float4(i.texcoord.r, i.texcoord.g, 1.0, 1.0);
-                float rawDepth = SampleRawDepth(i.texcoord);
-                float depth = Linear01Depth(rawDepth, _ZBufferParams);
+                // float rawDepth = SampleRawDepth(i.texcoord);
+                // float depth = Linear01Depth(rawDepth);
                 // return float4(depth, depth, depth, 1.);
+
+                // 2. depth を depth normal texture から参照する場合
+                float depth = 0;
+                float3 viewNormal = float3(0, 0, 0);
+                float4 cdn = SampleSceneDepth(i.texcoord);
+                DecodeDepthNormal(cdn, depth, viewNormal);
+                float rawDepth = InverseLinear01Depth(depth);
 
                 float3 viewPosition = ReconstructViewPositionFromDepth(i.texcoord, rawDepth);
 
@@ -181,7 +187,6 @@ Shader "Hidden/Custom/SSAOAngleBased"
 
                 float occludedAcc = 0.;
                 int samplingCount = 6;
-                float aaaaa = 0.;
 
                 for (int j = 0; j < samplingCount; j++)
                 {
@@ -192,8 +197,6 @@ Shader "Hidden/Custom/SSAOAngleBased"
 
                     float rawDepthA = SampleRawDepthByViewPosition(viewPosition, offsetA);
                     float rawDepthB = SampleRawDepthByViewPosition(viewPosition, offsetB);
-
-                    aaaaa += rawDepthA + rawDepthB;
 
                     float depthA = Linear01Depth(rawDepthA, _ZBufferParams);
                     float depthB = Linear01Depth(rawDepthB, _ZBufferParams);
@@ -239,7 +242,6 @@ Shader "Hidden/Custom/SSAOAngleBased"
                 }
 
                 float aoRate = occludedAcc / (float)samplingCount;
-                // return float4(aaaaa, aaaaa, aaaaa, 1.0);
 
                 // NOTE: 本当は環境光のみにAO項を考慮するのがよいが、forward x post process の場合は全体にかけちゃう
                 color.rgb = lerp(

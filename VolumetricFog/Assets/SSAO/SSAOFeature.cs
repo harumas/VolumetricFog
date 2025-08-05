@@ -10,7 +10,7 @@ public class SSAOSettings
     [Range(0f, 1f)] public float Blend = 0.5f;
     [Range(0.01f, 5f)] public float OcclusionSampleLength = 1f;
     [Range(0f, 5f)] public float OcclusionMinDistance = 0f;
-    [Range(0f, 5f)] public float OcclusionMaxDistance = 5f;
+    [Range(0f, 50f)] public float OcclusionMaxDistance = 5f;
     [Range(0f, 1f)] public float OcclusionBias = 0.001f;
     [Range(0f, 4f)] public float OcclusionStrength = 1f;
     [Range(0.1f, 4f)] public float OcclusionPower = 1f;
@@ -145,11 +145,17 @@ public class SSAOFeature : ScriptableRendererFeature
 
                     // 白のテクスチャにSSAOを書き込む
                     Blitter.BlitTexture(context.cmd, Texture2D.whiteTexture, Vector2.one, data.material, 0);
+
+                    Blitter.BlitCameraTexture(
+                        context.cmd, 
+                        renderer.cameraColorTargetHandle, 
+                        renderer.cameraColorTargetHandle, 
+                        data.material, 
+                        0 
+                    );
                 });
             }
-            
-            return;
-            
+
             using (var builder = renderGraph.AddRasterRenderPass<BlitPassData>("SSAO Composite Pass", out var passData))
             {
                 passData.material = m_Material;
