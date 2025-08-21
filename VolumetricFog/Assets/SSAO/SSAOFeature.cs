@@ -1,50 +1,46 @@
+
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering.RenderGraphModule;
 
-[System.Serializable]
-public class SSAOSettings
-{
-    [Range(0f, 1f)] public float Blend = 0.5f;
-    [Range(0.01f, 5f)] public float OcclusionSampleLength = 1f;
-    [Range(0f, 5f)] public float OcclusionMinDistance = 0f;
-    [Range(0f, 50f)] public float OcclusionMaxDistance = 5f;
-    [Range(0f, 1f)] public float OcclusionBias = 0.001f;
-    [Range(0f, 4f)] public float OcclusionStrength = 1f;
-    [Range(0.1f, 4f)] public float OcclusionPower = 1f;
-    public Color OcclusionColor = Color.black;
-}
-
 public class SSAOFeature : ScriptableRendererFeature
 {
+    [System.Serializable]
+    public class SSAOSettings
+    {
+        [Range(0f, 1f)] public float Blend = 0.5f;
+        [Range(0.01f, 5f)] public float OcclusionSampleLength = 1f;
+        [Range(0f, 5f)] public float OcclusionMinDistance = 0f;
+        [Range(0f, 50f)] public float OcclusionMaxDistance = 5f;
+        [Range(0f, 1f)] public float OcclusionBias = 0.001f;
+        [Range(0f, 4f)] public float OcclusionStrength = 1f;
+        [Range(0.1f, 4f)] public float OcclusionPower = 1f;
+        public Color OcclusionColor = Color.black;
+        public float[] SamplingRotations = new float[6];
+        public float[] SamplingDistances = new float[6];
+        public Shader ssaoShader;
+    }
+
     public SSAOSettings settings = new SSAOSettings();
-    public Shader ssaoShader;
 
     private Material m_Material;
+    private SSAOPass m_Pass;
 
     public override void Create()
     {
-        if (ssaoShader == null)
-        {
-            Debug.LogError("SSAO Shader is not assigned!");
-            return;
-        }
-
-        m_Material = CoreUtils.CreateEngineMaterial(ssaoShader);
+        if (settings.ssaoShader != null)
+            m_Material = CoreUtils.CreateEngineMaterial(settings.ssaoShader);
+        else
+            Debug.LogWarning("SSAO shader not assigned in SSAOFeature.");
+        m_Pass = new SSAOPass(m_Material, settings);
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        var cameraType = renderingData.cameraData.cameraType;
-        // ゲームカメラ と シーンビューカメラ の両方で実行するようにする
-        if (cameraType != CameraType.Game && cameraType != CameraType.SceneView)
-        {
-            return;
-        }
-
-        renderer.EnqueuePass(new SSAOPass(m_Material, settings));
+        if (m_Pass != null)
+            renderer.EnqueuePass(m_Pass);
     }
 
     protected override void Dispose(bool disposing)
@@ -52,122 +48,107 @@ public class SSAOFeature : ScriptableRendererFeature
         CoreUtils.Destroy(m_Material);
     }
 
+    // ------------------------------------------------------------
+    // ScriptableRenderPass implementing RenderGraph usage
+    // ------------------------------------------------------------
     private class SSAOPass : ScriptableRenderPass
     {
-        private Material m_Material;
-        private SSAOSettings m_Settings;
+        private readonly Material material;
+        private readonly SSAOSettings settings;
 
-        private class PassData
+        // shader property IDs
+        private static readonly int BlendID = Shader.PropertyToID("_Blend");
+        private static readonly int OcclusionColorID = Shader.PropertyToID("_OcclusionColor");
+        private static readonly int OcclusionSampleLengthID = Shader.PropertyToID("_OcclusionSampleLength");
+        private static readonly int OcclusionMinDistanceID = Shader.PropertyToID("_OcclusionMinDistance");
+        private static readonly int OcclusionMaxDistanceID = Shader.PropertyToID("_OcclusionMaxDistance");
+        private static readonly int OcclusionBiasID = Shader.PropertyToID("_OcclusionBias");
+        private static readonly int OcclusionStrengthID = Shader.PropertyToID("_OcclusionStrength");
+        private static readonly int OcclusionPowerID = Shader.PropertyToID("_OcclusionPower");
+        private static readonly int SamplingRotationsID = Shader.PropertyToID("_SamplingRotations");
+        private static readonly int SamplingDistancesID = Shader.PropertyToID("_SamplingDistances");
+
+        public SSAOPass(Material mat, SSAOSettings settings)
         {
-            public Material material;
-            public SSAOSettings settings;
-        }
-
-        private class BlitPassData
-        {
-            public Material material;
-            public TextureHandle ssaoTexture;
-        }
-
-        public SSAOPass(Material material, SSAOSettings settings)
-        {
-            this.m_Material = material;
-            SetUpSamplingPoints(material);
-
-            this.m_Settings = settings;
+            this.material = mat;
+            this.settings = settings;
             this.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
         }
 
-        public void SetUpSamplingPoints(Material material)
+        // PassData used by RenderGraph - do NOT store UniversalResourceData here
+        private class PassData
         {
-            var rotList = new List<float>();
-            var lenList = new List<float>();
-            var sampleCount = 6;
-
-            for (int i = 0; i < sampleCount; i++)
-            {
-                // 任意の角度. できるだけ均等にバラけていた方がよい
-                var pieceRad = (Mathf.PI * 2) / sampleCount;
-                var rad = UnityEngine.Random.Range(
-                    pieceRad * i,
-                    pieceRad * (i + 1)
-                );
-                rotList.Add(rad);
-                // 任意の長さの範囲. できるだけ均等にバラけていた方がよい
-                var baseLen = 0.1f;
-                var pieceLen = (1f - baseLen) / sampleCount;
-                var len = UnityEngine.Random.Range(
-                    baseLen + pieceLen * i,
-                    baseLen + pieceLen * (i + 1)
-                );
-                lenList.Add(len);
-            }
-
-            material.SetFloatArray("_SamplingRotations", rotList.ToArray());
-            material.SetFloatArray("_SamplingDistances", lenList.ToArray());
+            public Material material;
+            public TextureHandle srcColor;   // 読み取り元 (activeColorTexture)
+            public TextureHandle depth;      // depth handle (読み取り)
+            public TextureHandle dst;        // 書き込み先 (temp)
         }
 
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
-            // カメラ情報を取得
+            // 1) get URP frame resources (handles)
             var cameraData = frameData.Get<UniversalCameraData>();
-
-            // レンダリングののリソース情報を取得
             var resourceData = frameData.Get<UniversalResourceData>();
 
-            // 描画先の情報を取得
-            var descriptor = cameraData.cameraTargetDescriptor;
-            descriptor.depthBufferBits = 0;
-            descriptor.colorFormat = RenderTextureFormat.ARGB32;
+            // if material missing bail out
+            if (material == null)
+                return;
 
-            // 一時テクスチャを作成する
-            TextureHandle ssaoTexture = UniversalRenderer.CreateRenderGraphTexture(renderGraph, descriptor, "SSAO_Texture", true);
+            // 2) prepare a temp render target (same size as camera)
+            var desc = cameraData.cameraTargetDescriptor;
+            desc.depthBufferBits = 0;
+            desc.colorFormat = RenderTextureFormat.ARGB32; // compatible format
+            var tempColor = UniversalRenderer.CreateRenderGraphTexture(renderGraph, desc, "SSAO_TempColor", false);
 
-            using (var builder = renderGraph.AddRasterRenderPass<PassData>("SSAO Pass", out var passData))
+            // 3) PASS A: compute AO and composite into tempColor
+            using (var builder = renderGraph.AddRasterRenderPass<PassData>("SSAO: Compute+Composite", out var passData))
             {
-                passData.material = m_Material;
-                passData.settings = m_Settings;
+                passData.material = material;
+                passData.srcColor = resourceData.activeColorTexture;   // 読み取り元
+                passData.depth = resourceData.cameraDepthTexture;      // depth (読み)
+                passData.dst = tempColor;                              // 書き込み先
 
-                builder.UseTexture(resourceData.cameraDepthTexture, AccessFlags.Read);
-                builder.UseTexture(resourceData.cameraNormalsTexture, AccessFlags.Read);
-                builder.SetRenderAttachment(resourceData.activeColorTexture, 0, AccessFlags.Write);
+                // declare usages to render graph
+                builder.UseTexture(passData.srcColor, AccessFlags.Read);
+                builder.UseTexture(passData.depth, AccessFlags.Read);
+                builder.SetRenderAttachment(passData.dst, 0);
 
-                builder.SetRenderFunc((PassData data, RasterGraphContext context) =>
+                // Set material params from settings BEFORE execution (the passData holds material ref)
+                // We set arrays and floats during execution to be safest (but setting here is ok as well).
+                builder.SetRenderFunc((PassData data, RasterGraphContext ctx) =>
                 {
-                    data.material.SetFloat("_Blend", data.settings.Blend);
-                    data.material.SetFloat("_OcclusionSampleLength", data.settings.OcclusionSampleLength);
-                    data.material.SetFloat("_OcclusionMinDistance", data.settings.OcclusionMinDistance);
-                    data.material.SetFloat("_OcclusionMaxDistance", data.settings.OcclusionMaxDistance);
-                    data.material.SetFloat("_OcclusionBias", data.settings.OcclusionBias);
-                    data.material.SetFloat("_OcclusionStrength", data.settings.OcclusionStrength);
-                    data.material.SetFloat("_OcclusionPower", data.settings.OcclusionPower);
-                    data.material.SetColor("_OcclusionColor", data.settings.OcclusionColor);
+                    // set material parameters each frame
+                    data.material.SetFloat(BlendID, settings.Blend);
+                    data.material.SetColor(OcclusionColorID, settings.OcclusionColor);
+                    data.material.SetFloat(OcclusionSampleLengthID, settings.OcclusionSampleLength);
+                    data.material.SetFloat(OcclusionMinDistanceID, settings.OcclusionMinDistance);
+                    data.material.SetFloat(OcclusionMaxDistanceID, settings.OcclusionMaxDistance);
+                    data.material.SetFloat(OcclusionBiasID, settings.OcclusionBias);
+                    data.material.SetFloat(OcclusionStrengthID, settings.OcclusionStrength);
+                    data.material.SetFloat(OcclusionPowerID, settings.OcclusionPower);
+                    data.material.SetFloatArray(SamplingRotationsID, settings.SamplingRotations);
+                    data.material.SetFloatArray(SamplingDistancesID, settings.SamplingDistances);
 
-                    // 白のテクスチャにSSAOを書き込む
-                    Blitter.BlitTexture(context.cmd, Texture2D.whiteTexture, Vector2.one, data.material, 0);
-
-                    Blitter.BlitCameraTexture(
-                        context.cmd, 
-                        renderer.cameraColorTargetHandle, 
-                        renderer.cameraColorTargetHandle, 
-                        data.material, 
-                        0 
-                    );
+                    // Blit: source is active color (bound to _BlitTexture by Blitter),
+                    // shader pass 0 should compute AO from depth and composite with source color,
+                    // writing final composed color into data.dst (render target).
+                    Blitter.BlitTexture(ctx.cmd, data.srcColor, new Vector4(1, 1, 0, 0), data.material, 0);
                 });
             }
 
-            using (var builder = renderGraph.AddRasterRenderPass<BlitPassData>("SSAO Composite Pass", out var passData))
+            // 4) PASS B: commit tempColor -> camera active color (destination)
+            using (var builder = renderGraph.AddRasterRenderPass<PassData>("SSAO: Commit to Camera", out var passData2))
             {
-                passData.material = m_Material;
-                passData.ssaoTexture = ssaoTexture;
+                passData2.srcColor = tempColor;                      // 読み元: 合成済み temp
+                passData2.dst = resourceData.activeColorTexture;     // 書き戻し先: カメラ色
 
-                builder.UseTexture(passData.ssaoTexture, AccessFlags.Read);
-                builder.SetRenderAttachment(resourceData.activeColorTexture, 0, AccessFlags.Write);
+                builder.UseTexture(passData2.srcColor, AccessFlags.Read);
+                builder.SetRenderAttachment(passData2.dst, 0);
 
-                builder.SetRenderFunc((BlitPassData data, RasterGraphContext context) =>
+                builder.SetRenderFunc((PassData data, RasterGraphContext ctx) =>
                 {
-                    // カメラにSSAOテクスチャを書き込む
-                    Blitter.BlitTexture(context.cmd, data.ssaoTexture, Vector2.one, data.material, 1);
+                    // simple copy - no material (can pass null)
+                    Blitter.BlitTexture(ctx.cmd, data.srcColor, new Vector4(1, 1, 0, 0), null, 1);
                 });
             }
         }

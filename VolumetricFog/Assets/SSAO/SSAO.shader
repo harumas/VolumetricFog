@@ -155,10 +155,6 @@ Shader "Hidden/Custom/SSAOAngleBased"
 
             float4 Frag(Varyings i) : SV_Target
             {
-                float4 color = float4(1, 1, 1, 1);
-
-                float4 baseColor = SAMPLE_TEXTURE2D(_BlitTexture, sampler_LinearClamp, i.texcoord);
-
                 // 1. depth を depth texture から参照する場合
                 // return float4(i.texcoord.r, i.texcoord.g, 1.0, 1.0);
                 float rawDepth = SampleRawDepth(i.texcoord);
@@ -176,7 +172,7 @@ Shader "Hidden/Custom/SSAOAngleBased"
                 // mask exists depth
                 if (depth > 1. - eps)
                 {
-                    return baseColor;
+                    return float4(1, 1, 1, 1);
                 }
 
                 float occludedAcc = 0.;
@@ -239,19 +235,7 @@ Shader "Hidden/Custom/SSAOAngleBased"
                 }
 
                 float aoRate = occludedAcc / (float)samplingCount;
-                // return float4(aaaaa, aaaaa, aaaaa, 1.0);
-
-                // NOTE: 本当は環境光のみにAO項を考慮するのがよいが、forward x post process の場合は全体にかけちゃう
-                color.rgb = lerp(
-                    baseColor,
-                    _OcclusionColor,
-                    saturate(pow(saturate(aoRate), _OcclusionPower) * _OcclusionStrength)
-                );
-
-                color.rgb = lerp(baseColor, color.rgb, _Blend);
-
-                color.a = 1;
-                return color;
+                return float4(aoRate, aoRate, aoRate, 1.0);
             }
             ENDHLSL
 
