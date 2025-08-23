@@ -238,6 +238,30 @@ Shader "Hidden/Custom/SSAOAngleBased"
                 return float4(aoRate, aoRate, aoRate, 1.0);
             }
             ENDHLSL
+        }
+
+        Pass
+        {
+            Name "SSAO Composite"
+            ZTest Always Cull Off ZWrite Off
+
+            HLSLPROGRAM
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.core/Runtime/Utilities/Blit.hlsl"
+
+
+            #pragma vertex Vert
+            #pragma fragment Frag
+
+
+            float4 Frag(Varyings i) : SV_Target
+            {
+                float4 color = SAMPLE_TEXTURE2D(_BlitTexture, sampler_LinearClamp, i.texcoord);
+
+
+                return 
+            }
+            ENDHLSL
 
         }
     }

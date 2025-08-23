@@ -1,4 +1,3 @@
-
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -75,49 +74,45 @@ public class SSAOFeature : ScriptableRendererFeature
             this.renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
         }
 
-        // PassData used by RenderGraph - do NOT store UniversalResourceData here
         private class PassData
         {
             public Material material;
-            public TextureHandle srcColor;   // 読み取り元 (activeColorTexture)
-            public TextureHandle depth;      // depth handle (読み取り)
-            public TextureHandle dst;        // 書き込み先 (temp)
+            public TextureHandle color; // カメラのカラーデータ
+            public TextureHandle depth; // depth handle (読み取り)
+            public TextureHandle dst; // 書き込み先 (temp)
         }
 
         public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
         {
-            // 1) get URP frame resources (handles)
+            // フレームデータを取得
             var cameraData = frameData.Get<UniversalCameraData>();
             var resourceData = frameData.Get<UniversalResourceData>();
 
-            // if material missing bail out
+            // マテリアルがnullだったら終了
             if (material == null)
                 return;
 
-            // 2) prepare a temp render target (same size as camera)
             var desc = cameraData.cameraTargetDescriptor;
             desc.depthBufferBits = 0;
-            desc.colorFormat = RenderTextureFormat.ARGB32; // compatible format
-            var tempColor = UniversalRenderer.CreateRenderGraphTexture(renderGraph, desc, "SSAO_TempColor", false);
+            desc.colorFormat = RenderTextureFormat.ARGB32;
 
-            // 3) PASS A: compute AO and composite into tempColor
-            using (var builder = renderGraph.AddRasterRenderPass<PassData>("SSAO: Compute+Composite", out var passData))
+            // SSAOを書き込むための一時テクスチャを作成
+            TextureHandle tempColor = UniversalRenderer.CreateRenderGraphTexture(renderGraph, desc, "SSAO_TempColor", false);
+
+            using (var builder = renderGraph.AddRasterRenderPass<PassData>("SSAO: Compute", out var passData))
             {
                 passData.material = material;
-                passData.srcColor = resourceData.activeColorTexture;   // 読み取り元
-                passData.depth = resourceData.cameraDepthTexture;      // depth (読み)
-                passData.dst = tempColor;                              // 書き込み先
+                passData.depth = resourceData.cameraDepthTexture; // 深度テクスチャを取得
+                passData.dst = tempColor; // 書き込み先を登録
 
-                // declare usages to render graph
-                builder.UseTexture(passData.srcColor, AccessFlags.Read);
                 builder.UseTexture(passData.depth, AccessFlags.Read);
+
+                // 描画先を登録
                 builder.SetRenderAttachment(passData.dst, 0);
 
-                // Set material params from settings BEFORE execution (the passData holds material ref)
-                // We set arrays and floats during execution to be safest (but setting here is ok as well).
                 builder.SetRenderFunc((PassData data, RasterGraphContext ctx) =>
                 {
-                    // set material parameters each frame
+                    // パラメータを設定
                     data.material.SetFloat(BlendID, settings.Blend);
                     data.material.SetColor(OcclusionColorID, settings.OcclusionColor);
                     data.material.SetFloat(OcclusionSampleLengthID, settings.OcclusionSampleLength);
@@ -129,26 +124,21 @@ public class SSAOFeature : ScriptableRendererFeature
                     data.material.SetFloatArray(SamplingRotationsID, settings.SamplingRotations);
                     data.material.SetFloatArray(SamplingDistancesID, settings.SamplingDistances);
 
-                    // Blit: source is active color (bound to _BlitTexture by Blitter),
-                    // shader pass 0 should compute AO from depth and composite with source color,
-                    // writing final composed color into data.dst (render target).
-                    Blitter.BlitTexture(ctx.cmd, data.srcColor, new Vector4(1, 1, 0, 0), data.material, 0);
+                    // 描画
+                    Blitter.BlitTexture(ctx.cmd, Texture2D.whiteTexture, new Vector4(1, 1, 0, 0), data.material, 0);
                 });
             }
 
-            // 4) PASS B: commit tempColor -> camera active color (destination)
             using (var builder = renderGraph.AddRasterRenderPass<PassData>("SSAO: Commit to Camera", out var passData2))
             {
-                passData2.srcColor = tempColor;                      // 読み元: 合成済み temp
-                passData2.dst = resourceData.activeColorTexture;     // 書き戻し先: カメラ色
-
-                builder.UseTexture(passData2.srcColor, AccessFlags.Read);
+                passData2.dst = resourceData.activeColorTexture;
+                
+                builder.UseTexture(tempColor, AccessFlags.Read);
                 builder.SetRenderAttachment(passData2.dst, 0);
 
                 builder.SetRenderFunc((PassData data, RasterGraphContext ctx) =>
                 {
-                    // simple copy - no material (can pass null)
-                    Blitter.BlitTexture(ctx.cmd, data.srcColor, new Vector4(1, 1, 0, 0), null, 1);
+                    Blitter.BlitTexture(ctx.cmd, data.dst, new Vector4(1, 1, 0, 0), material, 1);
                 });
             }
         }
